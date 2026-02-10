@@ -2,14 +2,20 @@
 // Loads from .env and provides API configuration
 
 const getApiUrl = () => {
-  // In production, derive from window location
-  if (typeof window !== 'undefined') {
-    const protocol = window.location.protocol;
-    const host = window.location.hostname;
-    const port = import.meta.env.VITE_API_PORT || '3001';
-    return `${protocol}//${host}:${port}`;
+  // Check for explicit API URL configuration first
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
   }
-  return import.meta.env.VITE_API_URL || 'http://localhost:3001';
+  
+  // Development: use localhost
+  if (!import.meta.env.PROD) {
+    const port = import.meta.env.VITE_API_PORT || '3001';
+    return `http://localhost:${port}`;
+  }
+  
+  // Production: must be configured via VITE_API_URL environment variable
+  console.warn('VITE_API_URL not configured for production');
+  return 'http://localhost:3001'; // Fallback (should not reach here in production)
 };
 
 export const apiConfig = {
