@@ -34,21 +34,33 @@ if (!fs.existsSync(logsDir)) {
 // Security middleware
 app.use(helmet());
 
-// CORS configuration - restrict to LAN IPs
+// CORS configuration
 const corsOptions = {
   origin: (origin, callback) => {
-    if (!origin || config.allowed_origins.includes(origin)) {
+    // Allow requests without origin (like mobile apps or curl requests)
+    if (!origin) {
+      callback(null, true);
+      return;
+    }
+    
+    // Check if origin is in allowed list
+    if (config.allowed_origins.includes(origin)) {
       callback(null, true);
     } else {
+      console.warn(`CORS blocked request from origin: ${origin}`);
       callback(new Error('Not allowed by CORS'));
     }
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
+  maxAge: 86400, // 24 hours
 };
 
 app.use(cors(corsOptions));
+
+// Explicit OPTIONS handler for preflight requests
+app.options('*', cors(corsOptions));
 
 // Request parsing
 app.use(express.json({ limit: '10mb' }));
