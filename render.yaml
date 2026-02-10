@@ -12,4 +12,6 @@ services:
         value: 3001
       - key: JWT_SECRET
         generateValue: true
+      - key: ALLOWED_ORIGINS
+        value: https://sctco-inventory.vercel.app,https://sctco-inventory-backend.onrender.com,http://localhost:3001,http://localhost:5173
     envFile: .env

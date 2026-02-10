@@ -24,7 +24,7 @@ export const config = {
   jwt_refresh_expiration: process.env.JWT_REFRESH_EXPIRATION || '30d',
 
   // CORS - parse allowed origins from comma-separated string
-  allowed_origins: (process.env.ALLOWED_ORIGINS || 'http://localhost:3001,http://localhost:5173,http://192.168.1.16:3001,http://192.168.1.16:5173,http://192.186.1.130:3001,http://192.186.1.130:5173').split(',').map(o => o.trim()),
+  allowed_origins: (process.env.ALLOWED_ORIGINS || 'http://localhost:3001,http://localhost:5173,http://192.168.1.16:3001,http://192.168.1.16:5173').split(',').map(o => o.trim()),
 
   // Security
   bcrypt_rounds: parseInt(process.env.BCRYPT_ROUNDS || '10', 10),
