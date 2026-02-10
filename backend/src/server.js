@@ -46,10 +46,19 @@ const corsOptions = {
     // Check if origin is in allowed list
     if (config.allowed_origins.includes(origin)) {
       callback(null, true);
-    } else {
-      console.warn(`CORS blocked request from origin: ${origin}`);
-      callback(new Error('Not allowed by CORS'));
+      return;
     }
+    
+    // In production, allow vercel.app domains and localhost
+    if (config.node_env === 'production') {
+      if (origin.includes('vercel.app') || origin.includes('localhost')) {
+        callback(null, true);
+        return;
+      }
+    }
+    
+    console.warn(`CORS blocked request from origin: ${origin}`);
+    callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
