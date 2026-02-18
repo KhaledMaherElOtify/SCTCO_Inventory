@@ -6,7 +6,7 @@ const path = require('path');
 const fs = require('fs');
 const isDev = require('electron-is-dev');
 const os = require('os');
-const spawn = require('child_process').spawn;
+const { spawn } = require('child_process');
 
 let mainWindow;
 let expressServer = null;
@@ -30,10 +30,7 @@ const ensureDataDirectory = () => {
 const startExpressServer = () => {
   return new Promise((resolve, reject) => {
     try {
-      // Path to the backend server
-      const backendPath = path.join(__dirname, '..', 'backend', 'src', 'server.js');
-      
-      // Set environment variables
+      const backendDir = path.join(__dirname, '..', 'backend');
       const env = {
         ...process.env,
         NODE_ENV: 'production',
@@ -41,22 +38,17 @@ const startExpressServer = () => {
         HOST: '127.0.0.1',
         DATABASE_PATH: path.join(getUserDataPath(), 'inventory.db'),
         JWT_SECRET: 'electron-app-secret-key-change-in-production',
-        ALLOWED_ORIGINS: 'http://localhost:5173,http://127.0.0.1:5173',
       };
 
-      // Start the server
-      expressServer = spawn('node', [backendPath], { 
-        env,
-        detached: false,
-        stdio: 'pipe'
-      });
+      console.log('Starting backend from:', backendDir);
+      console.log('Database path:', env.DATABASE_PATH);
 
-      expressServer.stdout.on('data', (data) => {
-        console.log(`[Backend] ${data}`);
-      });
-
-      expressServer.stderr.on('data', (data) => {
-        console.error(`[Backend Error] ${data}`);
+      // Start npm start in backend directory
+      expressServer = spawn('npm', ['start'], {
+        cwd: backendDir,
+        env: env,
+        stdio: 'inherit',
+        shell: true
       });
 
       expressServer.on('error', (err) => {
@@ -64,11 +56,13 @@ const startExpressServer = () => {
         reject(err);
       });
 
-      // Wait a bit for server to start
+      // Wait for server to start
       setTimeout(() => {
         resolve(true);
-      }, 2000);
+      }, 3000);
+
     } catch (err) {
+      console.error('Error in startExpressServer:', err);
       reject(err);
     }
   });
@@ -76,7 +70,8 @@ const startExpressServer = () => {
 
 // Create Electron window
 const createWindow = () => {
-  mainWindow = new BrowserWindow({
+  const iconPath = path.join(__dirname, '../assets/icon.png');
+  const windowConfig = {
     width: 1400,
     height: 900,
     minWidth: 800,
@@ -86,15 +81,22 @@ const createWindow = () => {
       nodeIntegration: false,
       contextIsolation: true,
       enableRemoteModule: false,
-    },
-    icon: path.join(__dirname, '../assets/icon.png'), // Add your app icon
-  });
+      sandbox: true
+    }
+  };
 
-  // Load app
-  const startURL = isDev ? 
-    'http://localhost:5173' : 
+  // Only set icon if it exists
+  if (fs.existsSync(iconPath)) {
+    windowConfig.icon = iconPath;
+  }
+
+  mainWindow = new BrowserWindow(windowConfig);
+
+  const startURL = isDev ?
+    'http://localhost:5173' :
     `file://${path.join(__dirname, '../frontend/dist/index.html')}`;
 
+  console.log('Loading URL:', startURL);
   mainWindow.loadURL(startURL);
 
   if (isDev) {
@@ -112,14 +114,8 @@ const createMenu = () => {
     {
       label: 'File',
       submenu: [
-        {
-          label: 'Exit',
-          accelerator: 'CmdOrCtrl+Q',
-          click: () => {
-            app.quit();
-          },
-        },
-      ],
+        { label: 'Exit', accelerator: 'CmdOrCtrl+Q', click: () => app.quit() }
+      ]
     },
     {
       label: 'Edit',
@@ -129,25 +125,9 @@ const createMenu = () => {
         { type: 'separator' },
         { role: 'cut' },
         { role: 'copy' },
-        { role: 'paste' },
-      ],
-    },
-    {
-      label: 'Help',
-      submenu: [
-        {
-          label: 'About',
-          click: () => {
-            dialog.showMessageBox(mainWindow, {
-              type: 'info',
-              title: 'CSTCO Inventory Management',
-              message: 'CSTCO Inventory Management System v1.0.0',
-              detail: 'A modern inventory management solution',
-            });
-          },
-        },
-      ],
-    },
+        { role: 'paste' }
+      ]
+    }
   ];
 
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
@@ -166,47 +146,50 @@ ipcMain.handle('get-backend-url', () => {
   return `http://localhost:${EXPRESS_PORT}`;
 });
 
-// App event handlers
+// App lifecycle
 app.on('ready', async () => {
   try {
-    // Ensure data directory exists
+    console.log('App starting...');
     ensureDataDirectory();
+    
+    if (!isDev) {
+      await startExpressServer();
+      console.log('Backend server started');
+    }
 
-    // Start Express server
-    await startExpressServer();
-    console.log('✓ Express server started');
-
-    // Create window
     createWindow();
     createMenu();
-
-    console.log('✓ Electron app started');
+    console.log('App ready');
   } catch (err) {
     console.error('Error starting app:', err);
-    dialog.showErrorBox('Startup Error', 'Failed to start the application');
+    dialog.showErrorBox('Startup Error', 'Failed to start application');
     app.quit();
   }
 });
 
 app.on('window-all-closed', () => {
-  // Kill Express server before quitting
   if (expressServer) {
+    console.log('Killing backend server');
     expressServer.kill();
   }
   app.quit();
 });
 
 app.on('activate', () => {
-  // On macOS, re-create window when dock icon is clicked
   if (mainWindow === null) {
     createWindow();
   }
 });
 
-// Handle any uncaught exceptions
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received');
+  if (expressServer) expressServer.kill();
+  app.quit();
+});
+
 process.on('uncaughtException', (err) => {
   console.error('Uncaught exception:', err);
-  if (expressServer) {
-    expressServer.kill();
-  }
+  if (expressServer) expressServer.kill();
+  process.exit(1);
 });
