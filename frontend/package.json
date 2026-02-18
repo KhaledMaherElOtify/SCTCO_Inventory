@@ -4,7 +4,8 @@
   "type": "module",
   "description": "Production-ready React Frontend for Inventory Management System",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --host",
+    "dev:local": "vite",
     "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint . --ext .js,.jsx"

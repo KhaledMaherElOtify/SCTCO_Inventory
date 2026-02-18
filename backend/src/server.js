@@ -49,7 +49,15 @@ const corsOptions = {
       return;
     }
     
-    // In production, allow vercel.app domains and localhost
+    // In development, allow all local network IPs (192.x, 10.x, 172.x, 127.x)
+    if (config.node_env !== 'production') {
+      if (origin.match(/^http:\/\/(localhost|127\.0\.0\.1|192\.186|192\.\d+|10\.\d+|172\.\d+)/)) {
+        callback(null, true);
+        return;
+      }
+    }
+    
+    // In production, allow vercel.app domains
     if (config.node_env === 'production') {
       if (origin.includes('vercel.app') || origin.includes('localhost')) {
         callback(null, true);

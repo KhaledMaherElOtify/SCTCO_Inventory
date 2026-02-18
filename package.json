@@ -1,15 +1,77 @@
 {
   "name": "cstco-inventory-system",
   "version": "1.0.0",
-  "description": "CSTCO Inventory Management System",
+  "description": "CSTCO Inventory Management System - Desktop & Web",
+  "main": "electron/main.js",
+  "homepage": "./",
   "scripts": {
-    "dev": "concurrently \"npm --prefix backend start\" \"npm --prefix frontend run dev\"",
+    "dev": "concurrently \"npm --prefix backend start\" \"npm --prefix frontend run dev -- --host\"",
     "start": "concurrently \"npm --prefix backend start\" \"npm --prefix frontend run dev\"",
     "backend": "npm --prefix backend start",
-    "frontend": "npm --prefix frontend run dev",
-    "kill": "taskkill /F /IM node.exe 2>nul || true"
+    "frontend": "npm --prefix frontend run dev -- --host",
+    "kill": "taskkill /F /IM node.exe 2>nul || true",
+    "electron": "electron .",
+    "electron-dev": "concurrently \"npm run backend\" \"npm --prefix frontend run dev\" \"wait-on http://localhost:5173 && electron .\"",
+    "electron-build": "npm --prefix frontend run build && electron-builder",
+    "dist": "npm run electron-build"
+  },
+  "build": {
+    "appId": "com.cstco.inventory",
+    "productName": "CSTCO Inventory",
+    "directories": {
+      "buildResources": "assets"
+    },
+    "files": [
+      "electron/**/*",
+      "backend/**/*",
+      "frontend/dist/**/*",
+      "node_modules/**/*",
+      "package.json"
+    ],
+    "extraMetadata": {
+      "main": "electron/main.js"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        "portable"
+      ],
+      "icon": "assets/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "CSTCO Inventory"
+    },
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "icon": "assets/icon.icns",
+      "category": "public.app-category.business"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "icon": "assets/icon.png",
+      "category": "Office"
+    }
   },
   "devDependencies": {
-    "concurrently": "^8.2.2"
+    "concurrently": "^8.2.2",
+    "electron": "^latest",
+    "electron-builder": "^latest",
+    "electron-is-dev": "^latest",
+    "wait-on": "^latest"
   }
 }
